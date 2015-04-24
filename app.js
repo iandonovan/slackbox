@@ -75,7 +75,7 @@ app.use('/store', function(req, res, next) {
   next();
 });
 
-app.post('/store', addOrRemove.bind(null, 'addTracksToPlaylist');
+app.post('/store', addOrRemove.bind(null, 'addTracksToPlaylist'));
 
 // I know how HTTP verbs work, I promise, but Slack can only do a GET or POST.
 app.post('/remove', addOrRemove.bind(null, 'removeTracksFromPlaylist'));
