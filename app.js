@@ -18,18 +18,43 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
+function addOrRemove(doWhat, req, res) {
+  spotifyApi.refreshAccessToken()
+    .then(function(data) {
+      spotifyApi.searchTracks(req.body.text)
+        .then(function(data) {
+          var results = data.body.tracks.items;
+          if (results.length === 0) {
+            return res.send('Could not find that track.');
+          }
+          var trackId = results[0].id;
+          spotifyApi[doWhat](process.env.SPOTIFY_USERNAME, process.env.SPOTIFY_PLAYLIST_ID, ['spotify:track:' + trackId])
+            .then(function(data) {
+              var msg = doWhat === 'addTracksToPlaylist' ? 'Track added!' : 'Track removed!';
+              return res.send(msg);
+            }, function(err) {
+              return res.send(err.message);
+            });
+        }, function(err) {
+          return res.send(err.message);
+        });
+    }, function(err) {
+      return res.send('Could not referesh access token, you probably need to auth yourself again.');
+    });
+}
+
 app.get('/', function(req, res) {
   if (spotifyApi.getAccessToken()) {
     return res.send('You are logged in.');
   }
-  return res.send('<a href="/authorise">Authorise</a>');
+  return res.send('<a href="/authorize">Authorize</a>');
 });
 
-app.get('/authorise', function(req, res) {
+app.get('/authorize', function(req, res) {
   var scopes = ['playlist-modify-public', 'playlist-modify-private'];
   var state  = new Date().getTime();
-  var authoriseURL = spotifyApi.createAuthorizeURL(scopes, state);
-  res.redirect(authoriseURL);
+  var authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
+  res.redirect(authorizeURL);
 });
 
 app.get('/callback', function(req, res) {
@@ -50,29 +75,10 @@ app.use('/store', function(req, res, next) {
   next();
 });
 
-app.post('/store', function(req, res) {
-  spotifyApi.refreshAccessToken()
-    .then(function(data) {
-      spotifyApi.searchTracks(req.body.text)
-        .then(function(data) {
-          var results = data.body.tracks.items;
-          if (results.length === 0) {
-            return res.send('Could not find that track.');
-          }
-          var trackId = results[0].id;
-          spotifyApi.addTracksToPlaylist(process.env.SPOTIFY_USERNAME, process.env.SPOTIFY_PLAYLIST_ID, ['spotify:track:' + trackId])
-            .then(function(data) {
-              return res.send('Track added!');
-            }, function(err) {
-              return res.send(err.message);
-            });
-        }, function(err) {
-          return res.send(err.message);
-        });
-    }, function(err) {
-      return res.send('Could not referesh access token, you probably need to auth yourself again.');
-    });
-});
+app.post('/store', addOrRemove.bind(null, 'addTracksToPlaylist');
+
+// I know how HTTP verbs work, I promise, but Slack can only do a GET or POST.
+app.post('/remove', addOrRemove.bind(null, 'removeTracksFromPlaylist'));
 
 app.set('port', (process.env.PORT || 5000));
 app.listen(app.get('port'));
