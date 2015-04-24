@@ -69,7 +69,8 @@ app.get('/callback', function(req, res) {
 });
 
 app.use('/store', function(req, res, next) {
-  if (req.body.token !== process.env.SLACK_TOKEN) {
+  var token = req.body.token;
+  if (token !== process.env.SLACK_ADD_TOKEN && token !== process.env.SLACK_REMOVE_TOKEN) {
     return res.status(500).send('Cross site request forgerizzle!');
   }
   next();
