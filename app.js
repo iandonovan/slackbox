@@ -18,6 +18,15 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
+var doWhatOptions = {
+  removeTracksFromPlaylist: function(trackId) {
+    return { tracks: [ { uri: "spotify:track:" + trackId }] };
+  },
+  addTracksToPlaylist: function(trackId) {
+    return ["spotify:track:" + trackId];
+  }
+};
+
 function addOrRemove(doWhat, req, res) {
   spotifyApi.refreshAccessToken()
     .then(function(data) {
@@ -28,7 +37,7 @@ function addOrRemove(doWhat, req, res) {
             return res.send('Could not find that track.');
           }
           var trackId = results[0].id;
-          spotifyApi[doWhat](process.env.SPOTIFY_USERNAME, process.env.SPOTIFY_PLAYLIST_ID, ['spotify:track:' + trackId])
+          spotifyApi[doWhat](process.env.SPOTIFY_USERNAME, process.env.SPOTIFY_PLAYLIST_ID, doWhatOptions[doWhat](trackId))
             .then(function(data) {
               var msg = doWhat === 'addTracksToPlaylist' ? 'Track added!' : 'Track removed!';
               return res.send(msg);
